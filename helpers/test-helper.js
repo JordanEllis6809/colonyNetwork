@@ -167,18 +167,36 @@ export async function forwardTime(seconds, test) {
     test.skip();
   } else {
     console.log(`Forwarding time with ${seconds}s ...`);
-    await web3.currentProvider.send({
-      jsonrpc: "2.0",
-      method: "evm_increaseTime",
-      params: [seconds],
-      id: 0
+    const p = new Promise((resolve, reject) => {
+      web3.currentProvider.send(
+        {
+          jsonrpc: "2.0",
+          method: "evm_increaseTime",
+          params: [seconds],
+          id: 0
+        },
+        err => {
+          if (err) {
+            return reject(err);
+          }
+          web3.currentProvider.send(
+            {
+              jsonrpc: "2.0",
+              method: "evm_mine",
+              params: [],
+              id: 0
+            },
+            (err2, res) => {
+              if (err2) {
+                return reject(err2);
+              }
+              return resolve(res);
+            }
+          );
+        }
+      );
     });
-    await web3.currentProvider.send({
-      jsonrpc: "2.0",
-      method: "evm_mine",
-      params: [],
-      id: 0
-    });
+    return p;
   }
 }
 
